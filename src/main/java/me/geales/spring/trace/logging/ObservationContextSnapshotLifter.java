@@ -51,7 +51,7 @@ public class ObservationContextSnapshotLifter<T> implements CoreSubscriber<T> {
 
     @Override
     public void onNext(T t) {
-        if (observationThreadLocalAccessor != null && observationThreadLocalAccessor.getValue() == null) {
+        if (isObservationThreadLocalUnset()) {
             try (ContextSnapshot.Scope scope = ContextSnapshot.setThreadLocalsFrom(currentContext(), ObservationThreadLocalAccessor.KEY)) {
                 delegate.onNext(t);
             }
@@ -62,11 +62,27 @@ public class ObservationContextSnapshotLifter<T> implements CoreSubscriber<T> {
 
     @Override
     public void onError(Throwable t) {
-        delegate.onError(t);
+        if (isObservationThreadLocalUnset()) {
+            try (ContextSnapshot.Scope scope = ContextSnapshot.setThreadLocalsFrom(currentContext(), ObservationThreadLocalAccessor.KEY)) {
+                delegate.onError(t);
+            }
+        } else {
+            delegate.onError(t);
+        }
     }
 
     @Override
     public void onComplete() {
-        delegate.onComplete();
+        if (isObservationThreadLocalUnset()) {
+            try (ContextSnapshot.Scope scope = ContextSnapshot.setThreadLocalsFrom(currentContext(), ObservationThreadLocalAccessor.KEY)) {
+                delegate.onComplete();
+            }
+        } else {
+            delegate.onComplete();
+        }
+    }
+
+    private boolean isObservationThreadLocalUnset() {
+        return observationThreadLocalAccessor != null && observationThreadLocalAccessor.getValue() == null;
     }
 }
