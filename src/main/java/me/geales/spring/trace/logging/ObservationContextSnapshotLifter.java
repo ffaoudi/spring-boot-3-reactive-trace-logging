@@ -3,6 +3,7 @@ package me.geales.spring.trace.logging;
 import java.util.function.BiFunction;
 
 import org.reactivestreams.Subscription;
+import org.springframework.lang.Nullable;
 
 import io.micrometer.context.ContextRegistry;
 import io.micrometer.context.ContextSnapshot;
@@ -19,9 +20,23 @@ public class ObservationContextSnapshotLifter<T> implements CoreSubscriber<T> {
 
     private final CoreSubscriber<? super T> delegate;
 
+    @Nullable
+    private final ObservationThreadLocalAccessor observationThreadLocalAccessor;
+
     private ObservationContextSnapshotLifter(CoreSubscriber<? super T> delegate) {
         this.delegate = delegate;
+        observationThreadLocalAccessor = findObservationThreadLocalAccessor();
     }
+
+    @Nullable
+    private static ObservationThreadLocalAccessor findObservationThreadLocalAccessor() {
+         for (ThreadLocalAccessor<?> threadLocalAccessor : ContextRegistry.getInstance().getThreadLocalAccessors()) {
+             if (ObservationThreadLocalAccessor.KEY.equals(threadLocalAccessor.key()) && threadLocalAccessor instanceof ObservationThreadLocalAccessor observationThreadLocalAccessor) {
+                 return observationThreadLocalAccessor;
+             }
+         }
+         return null;
+     }
 
     @Override
     public Context currentContext() {
@@ -35,7 +50,7 @@ public class ObservationContextSnapshotLifter<T> implements CoreSubscriber<T> {
 
     @Override
     public void onNext(T t) {
-        if (isObservationThreadLocalAvailableAndUnset()) {
+        if (observationThreadLocalAccessor != null && observationThreadLocalAccessor.getValue() == null) {
             try (ContextSnapshot.Scope scope = ContextSnapshot.setThreadLocalsFrom(currentContext(), ObservationThreadLocalAccessor.KEY)) {
                 delegate.onNext(t);
             }
@@ -53,15 +68,4 @@ public class ObservationContextSnapshotLifter<T> implements CoreSubscriber<T> {
     public void onComplete() {
         delegate.onComplete();
     }
-
-    private boolean isObservationThreadLocalAvailableAndUnset() {
-        for (ThreadLocalAccessor<?> threadLocalAccessor : ContextRegistry.getInstance().getThreadLocalAccessors()) {
-            if (ObservationThreadLocalAccessor.KEY.equals(threadLocalAccessor.key()) && threadLocalAccessor.getValue() == null) {
-                return true;
-            }
-        }
-        return false;
-    }
 }
-
-

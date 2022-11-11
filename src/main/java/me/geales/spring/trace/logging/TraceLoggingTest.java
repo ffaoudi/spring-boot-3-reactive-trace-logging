@@ -58,7 +58,7 @@ public class TraceLoggingTest {
                 .transformDeferredContextual((stringMono, contextView) -> {
                     logger.info("hello, world! {}", tracer.currentTraceContext().context().spanId());
                     return stringMono
-                            .delayElement(Duration.ofMillis(1000))
+                            .delayElement(Duration.ofMillis(10))
                             .transformDeferredContextual((stringMono1, contextView1) -> {
                                 logger.info("hello, nested World!");
                                 return stringMono1;
