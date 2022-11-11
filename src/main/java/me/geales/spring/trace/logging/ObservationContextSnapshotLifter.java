@@ -31,7 +31,8 @@ public class ObservationContextSnapshotLifter<T> implements CoreSubscriber<T> {
     @Nullable
     private static ObservationThreadLocalAccessor findObservationThreadLocalAccessor() {
          for (ThreadLocalAccessor<?> threadLocalAccessor : ContextRegistry.getInstance().getThreadLocalAccessors()) {
-             if (ObservationThreadLocalAccessor.KEY.equals(threadLocalAccessor.key()) && threadLocalAccessor instanceof ObservationThreadLocalAccessor observationThreadLocalAccessor) {
+             if (ObservationThreadLocalAccessor.KEY.equals(threadLocalAccessor.key()) 
+                    && threadLocalAccessor instanceof ObservationThreadLocalAccessor observationThreadLocalAccessor) {
                  return observationThreadLocalAccessor;
              }
          }
